@@ -15,49 +15,38 @@
  */
 package io.zeebe;
 
-import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.api.events.WorkflowInstanceEvent;
-import io.zeebe.test.ZeebeTestRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-public class WorkflowTest {
+import io.zeebe.client.ZeebeClient;
+import io.zeebe.client.api.events.WorkflowInstanceEvent;
+import io.zeebe.test.ZeebeTestRule;
 
-  @Rule public ZeebeTestRule testRule = new ZeebeTestRule();
+public class WorkflowTest
+{
 
-  private ZeebeClient client;
+    @Rule
+    public ZeebeTestRule testRule = new ZeebeTestRule();
 
-  @Before
-  public void deploy() {
-    client = testRule.getClient();
+    private ZeebeClient client;
 
-    client
-        .workflowClient()
-        .newDeployCommand()
-        .addResourceFromClasspath("process.bpmn")
-        .send()
-        .join();
-  }
+    @Before
+    public void deploy()
+    {
+        client = testRule.getClient();
 
-  @Test
-  public void shouldCompleteWorkflowInstance() {
-    final WorkflowInstanceEvent workflowInstance =
-        client
-            .workflowClient()
-            .newCreateInstanceCommand()
-            .bpmnProcessId("process")
-            .latestVersion()
-            .send()
-            .join();
+        client.newDeployCommand().addResourceFromClasspath("process.bpmn").send().join();
+    }
 
-    client
-        .jobClient()
-        .newWorker()
-        .jobType("task")
-        .handler((c, t) -> c.newCompleteCommand(t.getKey()).send().join())
-        .open();
+    @Test
+    public void shouldCompleteWorkflowInstance()
+    {
+        final WorkflowInstanceEvent workflowInstance = client.newCreateInstanceCommand().bpmnProcessId("process")
+                .latestVersion().send().join();
 
-    ZeebeTestRule.assertThat(workflowInstance).isEnded().hasPassed("start", "task", "end");
-  }
+        client.newWorker().jobType("task").handler((c, t) -> c.newCompleteCommand(t.getKey()).send().join()).open();
+
+        ZeebeTestRule.assertThat(workflowInstance).isEnded().hasPassed("start", "task", "end");
+    }
 }
